@@ -27,3 +27,22 @@ Next you should add VM images to VirtualBox:
 
 From there start each VM, authenticate(msfadmin, kali) and check for ```eth0``` running ```ifconfig``` for Metaspoitable and ```ip a``` for Kali. You should see something like ```192.168.x.x``` running these commands.  Ping one VM from another, it should be successful. 
 
+## Step 2 - Reconnaissance
+
+Reconnaissance referce to a process of preliminary investigating to gather information before performing an action. In our case, the logical question will pop up in an attacker's head: *what's there?*. It's crucial to know what you are attacking, before actually attacking. 
+
+From Kali run: 
+```bash
+nmap -sn <target-ip>/24
+```
+
+```-sn``` means "ping scan, no port scan" — it just finds live hosts. You'll see Kali, the host, and Metasploitable.
+
+Now port scan the target: 
+
+```bash
+nmap -sV -sC -p- <target-ip> -oN nmap_full.txt
+```
+Breaking that down: ```-sV``` does service/version detection (not just "port 21 is open" but "port 21 is running vsftpd 2.3.4"). ```-sC``` runs default safe scripts that probe for common issues. ```-p-``` scans all 65535 ports instead of just the top 1000. ```-oN``` saves output to a file. This will take a few minutes.
+
+You'll see something like 20+ open ports — FTP, SSH, Telnet, SMTP, HTTP, RPC, Samba, MySQL, PostgreSQL, VNC, IRC, and more. **This is your attack surface.** Each open port is a door, each service version is a clue, each unusual service is potentially something interesting.
