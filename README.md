@@ -1,0 +1,3 @@
+# Hacking Metaspoitable
+
+This is my walk down on how I hacked Metaspoitable2 and how fixed all the issues I ran into, this was my introduction project based upon what I had learned from Network+ and Security+ courses. Brief reference: Metaspoitable2 is an on-purpose vulnerable library which allows you to exploit different vulnerabilities. A legal way to learn offensive techniques. Let's go through the whole process. 
