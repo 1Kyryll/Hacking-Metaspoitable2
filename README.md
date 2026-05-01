@@ -46,3 +46,25 @@ nmap -sV -sC -p- <target-ip> -oN nmap_full.txt
 Breaking that down: ```-sV``` does service/version detection (not just "port 21 is open" but "port 21 is running vsftpd 2.3.4"). ```-sC``` runs default safe scripts that probe for common issues. ```-p-``` scans all 65535 ports instead of just the top 1000. ```-oN``` saves output to a file. This will take a few minutes.
 
 You'll see something like 20+ open ports — FTP, SSH, Telnet, SMTP, HTTP, RPC, Samba, MySQL, PostgreSQL, VNC, IRC, and more. **This is your attack surface.** Each open port is a door, each service version is a clue, each unusual service is potentially something interesting.
+
+## Step 3 - Identifying Vulnerabilities
+
+For each interesting service, the workflow is: get the version → look up known vulnerabilities → check if there's a public exploit.
+
+The classic tool is ```searchsploit``` (Exploit-DB's offline database, preinstalled on Kali):
+
+```bash 
+searchsploit vsftpd 2.3.4
+searchsploit samba 3.0.20
+searchsploit unrealircd 3.2.8.1
+```
+For each one of these commands you will get different response with vulnerabilities listed. You will something like this for ```searchsploit vsftpd 2.3.4```: 
+
+```bash
+vsftpd 2.3.4 - Backdoor Command Execution | unix/remote/17491.rb
+vsftpd 2.3.4 - Backdoor Command Execution | unix/remote/49757.py
+```
+
+This is **CVE-2011-2523**, you can google it up. This vulnerability is a backdoor that opens a shell on port 6200/tcp, allowing unauthorized access to affected systems. The backdoor script activate if you type in ```:)``` at the end of your username when authenticating, just like this: ```username:)```. I highly reccomend you to google all these vulnerabilities, because it's essential to also know why what we are trying to exploit is broken. 
+
+Browser prompt: **CVE [service] [version]**
