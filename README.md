@@ -241,3 +241,6 @@ We can also use **Log Poisoning** tactic which allows us to execute code when a 
 2) Inject PHP code in something that will land in such a log file(a header, a username, a subject line)
 3) LFI-include the log -> PHP parse your injection -> code executes
 
+**CSRF** - Cross-Site Request Forgery, the attacker tricks a logged-in victim's browser into making a request to a site where they're authenticated. The browser automatically attaches the session cookie, so the request succeeds. It works because browsers are obedient,  If a logged-in user visits evil.com, and ```evil.com``` has ```<img src="https://bank.com/transfer?to=attacker&amount=10000">```, the browser dutifully makes the request to bank.com *with the user's bank.com cookies attached.* Bank.com sees a perfectly authenticated transfer request.
+
+In ```DVWA``` go to **CSRF**. The challenge is to change another user's password without them knowing. You craft an HTML page with a form that submits to DVWA's password-change endpoint. When the victim (logged into DVWA) visits your page, their password silently changes.
